@@ -1,44 +1,52 @@
 import streamlit as st
 import pandas as pd
+import altair as alt
 
-# Título de la app
-st.title("Análisis de Contratos por RUC")
+st.set_page_config(page_title="Análisis de Contratos", layout="wide")
+st.title("📊 Análisis de Contratos por RUC")
 
-# Cargar el archivo Parquet
 @st.cache_data
 def cargar_datos():
-    return pd.read_parquet("Consolidado.parquet")
+    df = pd.read_parquet("Consolidado.parquet")
+    df['RUC Origen'] = df['RUC Origen'].astype(str).str.strip()
+    # Convertir "Valor Proporcional GE" de string con comas a float
+    df['Valor Proporcional GE'] = df['Valor Proporcional GE'].str.replace(',', '').astype(float)
+    # Asegurar que fecha sea datetime
+    df['fecha_de_firma_de_contrato'] = pd.to_datetime(df['fecha_de_firma_de_contrato'], errors='coerce')
+    return df
 
 df = cargar_datos()
 
-# Mostrar tabla original
-st.subheader("Vista general del DataFrame")
-st.dataframe(df, use_container_width=True)
+# Sidebar - filtro de RUC
+st.sidebar.header("Filtros")
+rucs_unicos = sorted(df['RUC Origen'].dropna().unique())
+ruc_seleccionado = st.sidebar.selectbox("Selecciona un RUC", rucs_unicos)
 
-# Filtro por RUC
-rucs_unicos = df['RUC Origen'].dropna().unique()
-ruc_seleccionado = st.selectbox("Selecciona un RUC para filtrar", sorted(rucs_unicos))
-
+# Filtrar datos
 df_filtrado = df[df['RUC Origen'] == ruc_seleccionado]
 
-# Mostrar resultados filtrados
-st.subheader(f"Contratos para el RUC: {ruc_seleccionado}")
+# Mostrar tabla a la derecha en layout ancho
+st.subheader(f"Contratos para RUC: {ruc_seleccionado}")
+
+# Tabla
 st.dataframe(df_filtrado, use_container_width=True)
 
-# Mostrar métricas agregadas
-st.subheader("Resumen")
-col1, col2 = st.columns(2)
+# Preparar datos para gráfico
+df_graf = df_filtrado.copy()
+df_graf['AñoMes'] = df_graf['fecha_de_firma_de_contrato'].dt.to_period('M').astype(str)
 
-with col1:
-    st.metric("Total Valor Proporcional GE", df_filtrado["Valor Proporcional GE"].replace({',': ''}, regex=True).astype(float).sum())
+# Agrupar y sumar "Valor Proporcional GE" por mes
+df_graf_agrupado = df_graf.groupby('AñoMes')['Valor Proporcional GE'].sum().reset_index()
 
-with col2:
-    st.metric("Promedio mensual proporcional", df_filtrado["Valor Mensual proporcional"].replace({',': ''}, regex=True).astype(float).mean())
-
-# Descargar el filtro como Excel
-st.download_button(
-    label="📥 Descargar datos filtrados",
-    data=df_filtrado.to_excel(index=False, engine='openpyxl'),
-    file_name=f'Contratos_{ruc_seleccionado}.xlsx',
-    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+# Gráfico de barras con Altair
+bar_chart = alt.Chart(df_graf_agrupado).mark_bar(color='#4a90e2').encode(
+    x=alt.X('AñoMes', sort=None, title='Mes - Año'),
+    y=alt.Y('Valor Proporcional GE', title='Suma Valor Proporcional GE'),
+    tooltip=['AñoMes', 'Valor Proporcional GE']
+).properties(
+    width=700,
+    height=400,
+    title="Suma de Valor Proporcional GE por Mes y Año"
 )
+
+st.altair_chart(bar_chart, use_container_width=True)
