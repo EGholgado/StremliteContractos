@@ -1,52 +1,53 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
+import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Análisis de Contratos", layout="wide")
-st.title("📊 Análisis de Contratos por RUC")
+st.set_page_config(layout="wide", page_title="Análisis de Contratos por RUC")
 
 @st.cache_data
 def cargar_datos():
     df = pd.read_parquet("Consolidado.parquet")
     df['RUC Origen'] = df['RUC Origen'].astype(str).str.strip()
-    # Convertir "Valor Proporcional GE" de string con comas a float
-    df['Valor Proporcional GE'] = df['Valor Proporcional GE'].str.replace(',', '').astype(float)
-    # Asegurar que fecha sea datetime
+    df['Valor Proporcional GE'] = pd.to_numeric(df['Valor Proporcional GE'].str.replace(',', ''), errors='coerce')
     df['fecha_de_firma_de_contrato'] = pd.to_datetime(df['fecha_de_firma_de_contrato'], errors='coerce')
     return df
 
 df = cargar_datos()
 
-# Sidebar - filtro de RUC
-st.sidebar.header("Filtros")
-rucs_unicos = sorted(df['RUC Origen'].dropna().unique())
-ruc_seleccionado = st.sidebar.selectbox("Selecciona un RUC", rucs_unicos)
+st.title("📊 Análisis de Contratos por RUC")
 
-# Filtrar datos
-df_filtrado = df[df['RUC Origen'] == ruc_seleccionado]
+# Layout con columnas
+col1, col2 = st.columns([1, 3])
 
-# Mostrar tabla a la derecha en layout ancho
-st.subheader(f"Contratos para RUC: {ruc_seleccionado}")
+with col1:
+    st.header("Filtros")
 
-# Tabla
-st.dataframe(df_filtrado, use_container_width=True)
+    rucs_disponibles = df['RUC Origen'].dropna().unique().tolist()
+    rucs_disponibles.sort()
 
-# Preparar datos para gráfico
-df_graf = df_filtrado.copy()
-df_graf['AñoMes'] = df_graf['fecha_de_firma_de_contrato'].dt.to_period('M').astype(str)
+    ruc_seleccionado = st.selectbox("Selecciona RUC Origen", options=["Todos"] + rucs_disponibles)
 
-# Agrupar y sumar "Valor Proporcional GE" por mes
-df_graf_agrupado = df_graf.groupby('AñoMes')['Valor Proporcional GE'].sum().reset_index()
+    # Filtrar según selección
+    if ruc_seleccionado != "Todos":
+        df_filtrado = df[df['RUC Origen'] == ruc_seleccionado]
+    else:
+        df_filtrado = df.copy()
 
-# Gráfico de barras con Altair
-bar_chart = alt.Chart(df_graf_agrupado).mark_bar(color='#4a90e2').encode(
-    x=alt.X('AñoMes', sort=None, title='Mes - Año'),
-    y=alt.Y('Valor Proporcional GE', title='Suma Valor Proporcional GE'),
-    tooltip=['AñoMes', 'Valor Proporcional GE']
-).properties(
-    width=700,
-    height=400,
-    title="Suma de Valor Proporcional GE por Mes y Año"
-)
+with col2:
+    st.header("Datos")
 
-st.altair_chart(bar_chart, use_container_width=True)
+    st.dataframe(df_filtrado, use_container_width=True)
+
+    # Agrupar por año-mes y sumar valor proporcional
+    df_filtrado['Año-Mes'] = df_filtrado['fecha_de_firma_de_contrato'].dt.to_period('M').astype(str)
+    resumen_mes = df_filtrado.groupby('Año-Mes')['Valor Proporcional GE'].sum().reset_index()
+
+    # Graficar barras
+    fig, ax = plt.subplots(figsize=(10, 4))
+    ax.bar(resumen_mes['Año-Mes'], resumen_mes['Valor Proporcional GE'], color='skyblue')
+    ax.set_xticklabels(resumen_mes['Año-Mes'], rotation=45, ha='right')
+    ax.set_xlabel("Año-Mes")
+    ax.set_ylabel("Valor Proporcional GE")
+    ax.set_title("Valor Proporcional GE por Mes y Año")
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    st.pyplot(fig)
