@@ -103,6 +103,9 @@ if años_final:
         st.header("✏️ Proyección manual")
         
         VarNum = st.text_input("Ingresar cantidad de contratos a proyectar", 0)
+        VarNum = int(VarNum)
+        if VarNum < 0 or VarNum > 10:
+            VarNum = st.text_input("Ingresar un número válido", 0)
 
         VarNum = int(VarNum)
         if VarNum > 0:
