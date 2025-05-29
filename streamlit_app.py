@@ -6,16 +6,18 @@ import matplotlib.ticker as ticker
 st.set_page_config(layout="wide", page_title="Análisis de Contratos por RUC")
 
 @st.cache_data
-def cargar_datos(nombre):
-    df = pd.read_parquet(nombre)
+def cargar_datos():
+    df = pd.read_parquet("Consolidado.parquet")
     df['RUC'] = df['RUC'].astype(str).str.strip()
     df['Razón Social'] = df['Razón Social'].astype(str).str.strip()
-    return df
+    
+    df_mensual = pd.read_parquet("DataMensualContrato.parquet")
+    df_mensual['RUC'] = df_mensual['RUC'].astype(str).str.strip()
+    df_mensual['Razón Social'] = df_mensual['Razón Social'].astype(str).str.strip()
+    
+    return df, df_mensual
 
-# Cargar datos
-df = cargar_datos("Consolidado.parquet")
-df_mensual = cargar_datos("DataMensualContrato.parquet")
-
+df, df_mensual = cargar_datos()
 st.title("📊 Análisis de Contratos Oesce")
 
 # Sidebar Filtros
