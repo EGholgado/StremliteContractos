@@ -18,7 +18,7 @@ def cargar_datos():
 
 df, df_mensual = cargar_datos()
 
-st.title("Análisis de Contratos Oesce")
+st.title("Análisis de Contratos OSCE")
 
 rucs = sorted(df['RUC'].dropna().unique())
 razones = sorted(df['Razón Social'].dropna().unique())
