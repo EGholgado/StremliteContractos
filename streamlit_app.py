@@ -203,4 +203,4 @@ if años_final:
 
                 st.plotly_chart(fig, use_container_width=True)
 else:
-    st.warning("Por favor selecciona al menos un año.")
+    st.warning("Por favor selecciona al menos un año")
