@@ -131,7 +131,12 @@ if años_final:
             onn = st.toggle("Clic para mostrar los cálculos")
 
             if onn:
+                df_editado['Fecha de Firma de Contrato'] = pd.to_datetime(df_editado['Fecha de Firma de Contrato'], dayfirst=True, errors='coerce')
+                df_editado['Fecha Prevista de FIn de Contrato'] = pd.to_datetime(df_editado['Fecha Prevista de FIn de Contrato'], dayfirst=True, errors='coerce')
+
                 df_editado['Valor Mensual proporcional'] = df_editado['Monto del Contrato Original'] * df_editado['% Participación RUC'] / 100
+                df_editado['Nro de dias'] = (df_editado['Fecha Prevista de FIn de Contrato'] - df_editado['Fecha de Firma de Contrato']).dt.days
+                df_editado['Valor Mensual proporcional'] = (df_editado['Valor Mensual proporcional']/df_editado['Nro de dias'])*30
                 df_editado['Valor Mensual proporcional'] = pd.to_numeric(df_editado['Valor Mensual proporcional'].astype(str).str.replace(',', ''),errors='coerce').fillna(0)
 
                 fecha_inicio = df_editado['Fecha de Firma de Contrato'].min()
