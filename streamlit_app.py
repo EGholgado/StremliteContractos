@@ -32,12 +32,12 @@ años_opciones = ["Todos"] + sorted(df_mensual['Año'].dropna().unique())
 ruc_seleccionados = st.sidebar.multiselect(
     "Seleccionar RUC - Razón Social",
     options=ruc_opciones,
-    default=["Todos"])
+    default=[])
 
 años_seleccionados = st.sidebar.multiselect(
     "Seleccionar Año(s)",
     options=años_opciones,
-    default=["Todos"])
+    default=[])
 
 ruc_final = sorted(df['RUC - Razón Social'].dropna().unique()) if "Todos" in ruc_seleccionados else ruc_seleccionados
 años_final = sorted(df_mensual['Año'].dropna().unique()) if "Todos" in años_seleccionados else años_seleccionados
@@ -66,7 +66,7 @@ if años_final:
     df_grafico = df_mensual[df_mensual['RUC - Razón Social'].isin(ruc_final)]
     df_grafico = df_grafico[df_grafico['Fecha Periodo'].dt.year.isin(años_final)]
 
-    df_resumen = df_grafico.groupby(["Fecha Periodo", "RUC"], as_index=False).agg({
+    df_resumen = df_grafico.groupby(["Fecha Periodo", "RUC", "Razón Social"], as_index=False).agg({
         "Valor Mensual proporcional": "sum",
         "Contratos": "sum"
     })
@@ -74,20 +74,20 @@ if años_final:
     df_resumen['Fuente'] = 'Real'
     df_resumen = df_resumen.sort_values("Fecha Periodo")
 
-    fig = px.bar(
+    figbar01 = px.bar(
         df_resumen,
         x="Fecha Periodo", 
         y="Valor Mensual proporcional",
-        color="RUC",
+        color="Razón Social",
         hover_data={"Valor Mensual proporcional": ":,.2f", "RUC": True, "Contratos":True},
         labels={"Valor Mensual proporcional": "Valor (S/.)"},
-        title="Evolución Mensual de Contratos",
+        title="Evolución Mensual de Contratos apilados",
     )
 
-    fig.update_layout(
+    figbar01.update_layout(
         xaxis_title="Periodo",
         yaxis_title="Valor Mensual proporcional (S/.)",
-        legend_title="RUC",
+        legend_title="Razón Social",
         xaxis_tickformat="%Y %B",
         xaxis_tickangle=-45,
         hovermode="x unified",
@@ -95,7 +95,30 @@ if años_final:
         height=500,
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(figbar01, use_container_width=True)
+
+    figbar02 = px.bar(
+        df_resumen,
+        x="Fecha Periodo", 
+        y="Valor Mensual proporcional",
+        color="Razón Social",
+        hover_data={"Valor Mensual proporcional": ":,.2f", "RUC": True, "Contratos":True},
+        labels={"Valor Mensual proporcional": "Valor (S/.)"},
+        title="Evolución Mensual de Contratos agrupados",
+    )
+
+    figbar02.update_layout(
+        xaxis_title="Periodo",
+        yaxis_title="Valor Mensual proporcional (S/.)",
+        legend_title="Razón Social",
+        xaxis_tickformat="%Y %B",
+        xaxis_tickangle=-45,
+        barmode="group",
+        bargap=0.2,
+        height=500,
+    )
+
+    st.plotly_chart(figbar02, use_container_width=True)
 
     on = st.toggle("Activar proyección")
 
